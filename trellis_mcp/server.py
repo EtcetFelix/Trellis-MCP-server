@@ -207,6 +207,10 @@ def update_workflow_blocks(
     IMPORTANT: When creating a NEW block, you MUST provide a unique 'id' field.
     This can be any string like "my_trigger_001" or "patient_action_block".
     
+    CRITICAL: When UPDATING an existing block, you MUST provide the COMPLETE block
+    configuration, not just the fields you want to change. This API uses a "replace"
+    pattern, not a "patch" pattern.
+    
     Args:
         blocks: List of block objects to create or update. Each block needs:
             
@@ -254,19 +258,71 @@ def update_workflow_blocks(
             }
             
             ==== FOR UPDATING EXISTING BLOCKS ====
-            Required fields:
+            CRITICAL: You MUST include ALL of the block's original configuration,
+            not just the fields you want to change. The API requires the complete
+            block definition.
+            
+            Recommended process:
+            1. Call get_workflow_config() to retrieve the current block
+            2. Find the block you want to update in the response
+            3. Copy its entire configuration
+            4. Modify only the specific fields you want to change
+            5. Submit the complete modified block
+            
+            Required fields for updates:
             - id: (str) The existing block's ID from get_workflow_config() (starts with "wblock_")
+            - name: (str) Block name (original or updated)
+            - type: (str) Block type ("trigger" or "action")
+            - position: (dict) Position {"x": int, "y": int} (original or updated)
             
-            Optional fields (only include what you want to change):
-            - name: (str) New name
-            - position: (dict) New position
-            - Any other fields to update
+            For TRIGGER blocks, also include:
+            - trigger: (dict) Complete trigger configuration:
+                - event_name: (str) Event type
+                - entity_id: (str) Entity to watch
             
-            Example UPDATE:
+            For ACTION blocks, also include:
+            - action: (dict) Complete action configuration with all original fields
+            
+            Example UPDATE process:
+            Step 1 - Get current config:
+            >>> config = get_workflow_config()
+            >>> block = next(b for b in config["data"]["nodes"] 
+                            if b["id"] == "wblock_35WoHROu1wG9yPw4nykwe37T7om")
+            
+            Step 2 - Build complete updated block:
+            >>> updated_block = {
+                    "id": block["id"],
+                    "name": "Updated Name",  # Changed field
+                    "type": block["block_type"],
+                    "position": {
+                        "x": block["position_x"],
+                        "y": block["position_y"]
+                    },
+                    "trigger": {  # Must include complete trigger config
+                        "entity_id": block["entity_id"],
+                        "event_name": "new_asset"
+                    }
+                }
+            
+            Step 3 - Submit:
+            >>> update_workflow_blocks(blocks=[updated_block])
+            
+            WRONG (will fail with 422 error):
             {
                 "id": "wblock_35WmLblUNPVyNomrenTbffqTtLg",
-                "name": "Updated Trigger Name",
-                "position": {"x": 200, "y": 150}
+                "name": "Updated Name Only"
+            }
+            
+            CORRECT (will succeed):
+            {
+                "id": "wblock_35WmLblUNPVyNomrenTbffqTtLg",
+                "name": "Updated Name",
+                "type": "trigger",
+                "position": {"x": 250, "y": 100},
+                "trigger": {
+                    "event_name": "new_asset",
+                    "entity_id": "entity_35Gos7u7s4FtuKX9cZGRBzQDNG6"
+                }
             }
         
         deleted_block_ids: Optional list of block IDs to delete. Use the full
