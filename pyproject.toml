@@ -1,0 +1,28 @@
+[project]
+name = "trellis-mcp"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Alan Bohannon",email = "alanbohannon@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.0.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+]
+[project.scripts]
+trellis-mcp = "trellis_mcp.server:run"
+
+[tool.poetry]
+packages = [{include = "trellis_mcp"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.1,<10.0.0)"
+]
