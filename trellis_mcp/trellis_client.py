@@ -23,7 +23,6 @@ class TrellisClient:
     # API constants
     API_VERSION = "2025-03"
     BASE_URL = "https://enterprise.training.api.runtrellis.com/v1"
-    PROJECT_ID = "proj_35UTcShvQ3G7XtxDbKl278OzxqO"
     
     def __init__(self):
         """
@@ -32,16 +31,20 @@ class TrellisClient:
         Loads configuration from environment variables:
         - TRELLIS_API_KEY: API authentication token
         - TRELLIS_WORKFLOW_ID: ID of the workflow to manipulate
+        - TRELLIS_PROJECT_ID: ID of the project to work with
         """
         self.api_key = os.getenv("TRELLIS_API_KEY")
         self.workflow_id = os.getenv("TRELLIS_WORKFLOW_ID")
+        self.project_id = os.getenv("TRELLIS_PROJECT_ID")
         
         if not self.api_key:
             raise ValueError("TRELLIS_API_KEY environment variable is required")
         if not self.workflow_id:
             raise ValueError("TRELLIS_WORKFLOW_ID environment variable is required")
+        if not self.project_id:
+            raise ValueError("TRELLIS_PROJECT_ID environment variable is required")
         
-        logger.info(f"Initialized TrellisClient for project {self.PROJECT_ID}")
+        logger.info(f"Initialized TrellisClient for project {self.project_id}")
         logger.info(f"Target workflow: {self.workflow_id}")
     
     def _get_headers(self) -> dict:
@@ -135,7 +138,7 @@ class TrellisClient:
             "GET",
             "/transforms",
             params={
-                "proj_ids": [self.PROJECT_ID],
+                "proj_ids": [self.project_id],
                 "include_transform_params": True,
             }
         )
@@ -169,7 +172,7 @@ class TrellisClient:
         return self._request(
             "GET",
             "/entities",
-            params={"project_id": self.PROJECT_ID}
+            params={"project_id": self.project_id}
         )
     
     def get_entity_fields(self, entity_id: str) -> dict:
