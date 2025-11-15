@@ -201,47 +201,79 @@ def update_workflow_blocks(
     """
     Update workflow blocks - create new blocks, update existing ones, or delete blocks.
     
-    This is the primary tool for building workflows. Use it to add triggers,
-    actions, and configure how data flows through the workflow.
+    This is the primary tool for building workflows. The workflow_id is automatically
+    injected by the client - DO NOT include it in blocks.
+    
+    IMPORTANT: When creating a NEW block, you MUST provide a unique 'id' field.
+    This can be any string like "my_trigger_001" or "patient_action_block".
     
     Args:
-        blocks: List of block objects to create or update. Each block should have:
+        blocks: List of block objects to create or update. Each block needs:
             
-            Common fields (all blocks):
+            ==== FOR CREATING NEW BLOCKS ====
+            Required fields:
+            - id: (str) A unique identifier you create (e.g., "new_trigger_123")
             - name: (str) Human-readable name for the block
-            - type: (str) Block category (usually "customer")
-            - block_type: (str) Either "trigger" or "action"
+            - type: (str) Either "trigger" or "action"
             - position: (dict) Visual position with {"x": int, "y": int}
             
-            For CREATE (new blocks):
-            - Omit the "id" field - the API will generate one
+            For TRIGGER blocks, also include:
+            - trigger: (dict) with:
+                - event_name: (str) Event to watch for, e.g., "new_asset"
+                - entity_id: (str) The entity ID to watch (get from get_entities())
             
-            For UPDATE (existing blocks):
-            - Include "id": (str) The existing block's ID from get_workflow_config()
+            For ACTION blocks, also include:
+            - action: (dict) with:
+                - name: (str) Action type, e.g., "run_transformation", "create_record"
+                - entity_id: (str) Entity to act on (if applicable)
+                - transform_id: (str) Transformation to run (if action is run_transformation)
+                - mapping_config: (dict) Field mapping (if action is create_record/update_entity)
             
-            For TRIGGER blocks:
-            - trigger: (dict) Trigger configuration with:
-                - event_name: (str) e.g., "new_asset" for row creation
-                - entity_id: (str) The entity ID to watch for events
+            Example NEW trigger block:
+            {
+                "id": "referral_trigger_001",
+                "name": "Watch for New Referrals",
+                "type": "trigger",
+                "position": {"x": 100, "y": 100},
+                "trigger": {
+                    "event_name": "new_asset",
+                    "entity_id": "entity_35Gos7u7s4FtuKX9cZGRBzQDNG6"
+                }
+            }
             
-            For ACTION blocks (Run Transformation):
-            - action: (dict) Action configuration with:
-                - name: (str) e.g., "run_transformation"
-                - transform_id: (str) The transformation to run
-                - Additional action-specific fields
+            Example NEW action block:
+            {
+                "id": "extract_patient_001",
+                "name": "Extract Patient Data",
+                "type": "action",
+                "position": {"x": 300, "y": 100},
+                "action": {
+                    "name": "run_transformation",
+                    "transform_id": "transform_abc123"
+                }
+            }
             
-            For ACTION blocks (Update Entity):
-            - action: (dict) Action configuration with:
-                - name: (str) e.g., "update_entity" or "create_record"
-                - entity_id: (str) The entity to update
-                - mapping_config: (dict) How to map data to fields
-                - Additional action-specific fields
+            ==== FOR UPDATING EXISTING BLOCKS ====
+            Required fields:
+            - id: (str) The existing block's ID from get_workflow_config() (starts with "wblock_")
+            
+            Optional fields (only include what you want to change):
+            - name: (str) New name
+            - position: (dict) New position
+            - Any other fields to update
+            
+            Example UPDATE:
+            {
+                "id": "wblock_35WmLblUNPVyNomrenTbffqTtLg",
+                "name": "Updated Trigger Name",
+                "position": {"x": 200, "y": 150}
+            }
         
-        deleted_block_ids: Optional list of block IDs to delete. Use this to
-            remove blocks from the workflow.
+        deleted_block_ids: Optional list of block IDs to delete. Use the full
+            block IDs from get_workflow_config() (e.g., ["wblock_abc123", "wblock_def456"])
     
     Returns:
-        dict: API response confirming the update
+        dict: API response confirming the update with workflow_id
     """
     logger.info(f"Tool called: update_workflow_blocks(blocks={len(blocks)}, deleted_block_ids={deleted_block_ids})")
     try:

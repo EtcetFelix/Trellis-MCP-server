@@ -216,21 +216,33 @@ class TrellisClient:
         """
         Update workflow blocks (create, update, or delete).
         
-        Uses the workflow_id from environment variables.
+        Automatically injects workflow_id into each block from environment variables.
         
         Args:
-            blocks: List of block objects to create or update
-                - Omit 'id' field to create a new block
-                - Include 'id' field to update an existing block
+            blocks: List of block objects to create or update. Each block will
+                automatically have workflow_id injected - DO NOT include it.
+                
+                For CREATE (new blocks):
+                - Include a unique 'id' field (e.g., "my_trigger_001")
+                - Include 'name': Human-readable name
+                - Include 'type': "trigger" or "action"
+                - Include 'position': {"x": int, "y": int}
+                - For triggers: Include 'trigger': {"event_name": str, "entity_id": str}
+                - For actions: Include 'action': {action config}
+                
+                For UPDATE (existing blocks):
+                - Include the existing 'id' from get_workflow_config()
+                - Include any fields you want to update
+                
             deleted_block_ids: Optional list of block IDs to delete
         
         Returns:
             Full API response
         
-        Example:
-            # Create a new trigger block
+        Example CREATE:
             client.update_workflow_blocks([
                 {
+                    "id": "new_trigger_001",
                     "name": "New Asset Trigger",
                     "type": "trigger",
                     "position": {"x": 100, "y": 100},
@@ -241,14 +253,19 @@ class TrellisClient:
                 }
             ])
             
-            # Update and delete blocks
+        Example UPDATE:
             client.update_workflow_blocks(
                 blocks=[{
-                    "id": "block_123",
+                    "id": "wblock_existing_123",
                     "name": "Updated name",
-                    ...
-                }],
-                deleted_block_ids=["block_456", "block_789"]
+                    "position": {"x": 200, "y": 200}
+                }]
+            )
+            
+        Example DELETE:
+            client.update_workflow_blocks(
+                blocks=[],
+                deleted_block_ids=["wblock_456", "wblock_789"]
             )
         """
         logger.info(f"Updating blocks for workflow {self.workflow_id}")
@@ -256,7 +273,14 @@ class TrellisClient:
         if deleted_block_ids:
             logger.debug(f"Blocks to delete: {len(deleted_block_ids)}")
         
-        payload = {"blocks": blocks}
+        # Inject workflow_id into each block
+        blocks_with_workflow_id = []
+        for block in blocks:
+            block_copy = block.copy()
+            block_copy["workflow_id"] = self.workflow_id
+            blocks_with_workflow_id.append(block_copy)
+        
+        payload = {"blocks": blocks_with_workflow_id}
         if deleted_block_ids:
             payload["deleted_block_ids"] = deleted_block_ids
         
